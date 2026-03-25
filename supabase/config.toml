@@ -1,4 +1,3 @@
-[general]
 project_id = "xqjcexxltlixiddjbhfh"
 
 [auth]
@@ -14,7 +13,10 @@ max_rows = 1000
 [storage]
 file_size_limit = 52428800  # 50MB in bytes
 
-[functions]
+[functions.bunny-upload]
+verify_jwt = true
+
+[functions.blog-webhook]
 verify_jwt = true
 
 [realtime]
