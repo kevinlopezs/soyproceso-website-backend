@@ -1,0 +1,24 @@
+[general]
+project_id = "xqjcexxltlixiddjbhfh"
+
+[auth]
+site_url = "http://localhost:3000"
+additional_redirect_urls = [
+  "http://localhost:3001",
+  "http://localhost:3001/auth/callback"
+]
+
+[api]
+max_rows = 1000
+
+[storage]
+file_size_limit = 52428800  # 50MB in bytes
+
+[functions]
+verify_jwt = true
+
+[realtime]
+enabled = true
+
+[analytics]
+enabled = true

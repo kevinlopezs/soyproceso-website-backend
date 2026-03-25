@@ -1,0 +1,24 @@
+{
+  "name": "soyproceso-website-backend",
+  "version": "1.0.0",
+  "description": "Backend Supabase para Soy Proceso website",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "setup": "echo 'Setup instructions: configure .env file and run supabase commands'",
+    "deploy:migrations": "supabase db push",
+    "deploy:functions": "supabase functions deploy bunny-upload && supabase functions deploy blog-webhook"
+  },
+  "keywords": [
+    "supabase",
+    "backend",
+    "postgresql",
+    "bunny.net",
+    "blog"
+  ],
+  "author": "Kevin Lopez",
+  "license": "MIT",
+  "devDependencies": {
+    "@supabase/supabase-js": "^2.39.0"
+  }
+}
