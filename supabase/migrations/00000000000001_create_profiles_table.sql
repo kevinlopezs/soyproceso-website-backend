@@ -13,18 +13,21 @@ ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 
 -- Create policies
 -- Policy: Users can view their own profile
+DROP POLICY IF EXISTS "Users can view own profile" ON public.profiles;
 CREATE POLICY "Users can view own profile" 
     ON public.profiles 
     FOR SELECT 
     USING (auth.uid() = id);
 
 -- Policy: Users can update their own profile
+DROP POLICY IF EXISTS "Users can update own profile" ON public.profiles;
 CREATE POLICY "Users can update own profile" 
     ON public.profiles 
     FOR UPDATE 
     USING (auth.uid() = id);
 
 -- Policy: Service role can do anything (for backend operations)
+DROP POLICY IF EXISTS "Service role full access" ON public.profiles;
 CREATE POLICY "Service role full access" 
     ON public.profiles 
     FOR ALL 
@@ -40,6 +43,7 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Create trigger for updated_at
+DROP TRIGGER IF EXISTS set_updated_at ON public.profiles;
 CREATE TRIGGER set_updated_at
     BEFORE UPDATE ON public.profiles
     FOR EACH ROW
@@ -64,6 +68,7 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Create trigger for new user signups
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
 CREATE TRIGGER on_auth_user_created
     AFTER INSERT ON auth.users
     FOR EACH ROW

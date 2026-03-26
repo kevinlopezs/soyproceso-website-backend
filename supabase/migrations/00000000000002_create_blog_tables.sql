@@ -36,13 +36,13 @@ ALTER TABLE public.blog_posts ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.blog_post_categories ENABLE ROW LEVEL SECURITY;
 
 -- Policies for blog_categories
--- Anyone can view categories (public)
+DROP POLICY IF EXISTS "Anyone can view categories" ON public.blog_categories;
 CREATE POLICY "Anyone can view categories" 
     ON public.blog_categories 
     FOR SELECT 
     USING (true);
 
--- Only authenticated users with admin role can modify categories
+DROP POLICY IF EXISTS "Admins can manage categories" ON public.blog_categories;
 CREATE POLICY "Admins can manage categories" 
     ON public.blog_categories 
     FOR ALL 
@@ -55,37 +55,37 @@ CREATE POLICY "Admins can manage categories"
     );
 
 -- Policies for blog_posts
--- Anyone can view published posts
+DROP POLICY IF EXISTS "Anyone can view published posts" ON public.blog_posts;
 CREATE POLICY "Anyone can view published posts" 
     ON public.blog_posts 
     FOR SELECT 
     USING (status = 'published');
 
--- Authors can view their own posts (any status)
+DROP POLICY IF EXISTS "Authors can view own posts" ON public.blog_posts;
 CREATE POLICY "Authors can view own posts" 
     ON public.blog_posts 
     FOR SELECT 
     USING (auth.uid() = author_id);
 
--- Authors can create posts
+DROP POLICY IF EXISTS "Authors can create posts" ON public.blog_posts;
 CREATE POLICY "Authors can create posts" 
     ON public.blog_posts 
     FOR INSERT 
     WITH CHECK (auth.uid() = author_id);
 
--- Authors can update their own posts
+DROP POLICY IF EXISTS "Authors can update own posts" ON public.blog_posts;
 CREATE POLICY "Authors can update own posts" 
     ON public.blog_posts 
     FOR UPDATE 
     USING (auth.uid() = author_id);
 
--- Authors can delete their own posts
+DROP POLICY IF EXISTS "Authors can delete own posts" ON public.blog_posts;
 CREATE POLICY "Authors can delete own posts" 
     ON public.blog_posts 
     FOR DELETE 
     USING (auth.uid() = author_id);
 
--- Admins can manage all posts
+DROP POLICY IF EXISTS "Admins can manage all posts" ON public.blog_posts;
 CREATE POLICY "Admins can manage all posts" 
     ON public.blog_posts 
     FOR ALL 
@@ -97,12 +97,14 @@ CREATE POLICY "Admins can manage all posts"
         OR auth.jwt() ->> 'role' = 'service_role'
     );
 
--- Policies for blog_post_categories (read-only for public, manage for admins/authors)
+-- Policies for blog_post_categories
+DROP POLICY IF EXISTS "Anyone can view post categories" ON public.blog_post_categories;
 CREATE POLICY "Anyone can view post categories" 
     ON public.blog_post_categories 
     FOR SELECT 
     USING (true);
 
+DROP POLICY IF EXISTS "Admins and authors can manage post categories" ON public.blog_post_categories;
 CREATE POLICY "Admins and authors can manage post categories" 
     ON public.blog_post_categories 
     FOR ALL 
@@ -122,17 +124,19 @@ CREATE POLICY "Admins and authors can manage post categories"
     );
 
 -- Create updated_at triggers for all tables
+DROP TRIGGER IF EXISTS set_updated_at_categories ON public.blog_categories;
 CREATE TRIGGER set_updated_at_categories
     BEFORE UPDATE ON public.blog_categories
     FOR EACH ROW
     EXECUTE FUNCTION public.handle_updated_at();
 
+DROP TRIGGER IF EXISTS set_updated_at_posts ON public.blog_posts;
 CREATE TRIGGER set_updated_at_posts
     BEFORE UPDATE ON public.blog_posts
     FOR EACH ROW
     EXECUTE FUNCTION public.handle_updated_at();
 
--- Create function to automatically set published_at when status changes to 'published'
+-- Create function to automatically set published_at
 CREATE OR REPLACE FUNCTION public.handle_post_published()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -145,12 +149,13 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+DROP TRIGGER IF EXISTS set_published_at ON public.blog_posts;
 CREATE TRIGGER set_published_at
     BEFORE UPDATE ON public.blog_posts
     FOR EACH ROW
     EXECUTE FUNCTION public.handle_post_published();
 
--- Create indexes for better performance
+-- Create indexes
 CREATE INDEX IF NOT EXISTS idx_blog_posts_slug ON public.blog_posts(slug);
 CREATE INDEX IF NOT EXISTS idx_blog_posts_status ON public.blog_posts(status);
 CREATE INDEX IF NOT EXISTS idx_blog_posts_published_at ON public.blog_posts(published_at);
