@@ -19,6 +19,12 @@ verify_jwt = true
 [functions.blog-webhook]
 verify_jwt = true
 
+[functions.experience-init]
+verify_jwt = false
+
+[functions.experience-submit]
+verify_jwt = false
+
 [realtime]
 enabled = true
 
