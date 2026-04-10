@@ -14,7 +14,7 @@ max_rows = 1000
 file_size_limit = 52428800  # 50MB in bytes
 
 [functions.bunny-upload]
-verify_jwt = true
+verify_jwt = false
 
 [functions.blog-webhook]
 verify_jwt = true
