@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tu Autodiagnóstico de SoyProceso</title>
+    <style>
+        body {
+            font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            background-color: #f4f7f6;
+            margin: 0;
+            padding: 0;
+            color: #333333;
+        }
+        .container {
+            max-width: 600px;
+            margin: 40px auto;
+            background-color: #ffffff;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+        }
+        .header {
+            background-color: #0d1b2a;
+            padding: 30px;
+            text-align: center;
+        }
+        .header img {
+            max-width: 200px;
+            height: auto;
+        }
+        .content {
+            padding: 40px 30px;
+        }
+        h1 {
+            color: #1b263b;
+            font-size: 24px;
+            margin-top: 0;
+            margin-bottom: 20px;
+        }
+        p {
+            font-size: 16px;
+            line-height: 1.6;
+            margin-bottom: 20px;
+        }
+        .btn-container {
+            text-align: center;
+            margin: 30px 0;
+        }
+        .btn {
+            display: inline-block;
+            background-color: #415a77;
+            color: #ffffff;
+            text-decoration: none;
+            padding: 14px 28px;
+            border-radius: 6px;
+            font-weight: bold;
+            font-size: 16px;
+        }
+        .btn:hover {
+            background-color: #1b263b;
+        }
+        .footer {
+            background-color: #f4f7f6;
+            padding: 20px 30px;
+            text-align: center;
+            border-top: 1px solid #eeeeee;
+        }
+        .whatsapp-contact {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #e8f5e9;
+            border-radius: 6px;
+            text-align: center;
+        }
+        .whatsapp-contact p {
+            margin: 0 0 10px 0;
+            color: #2e7d32;
+            font-weight: bold;
+        }
+        .whatsapp-btn {
+            display: inline-block;
+            background-color: #25D366;
+            color: #ffffff;
+            text-decoration: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+        .footer-text {
+            font-size: 14px;
+            color: #777777;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <!-- Asumiendo el logo desde tu CDN configurada -->
+            <img src="https://soyproceso.b-cdn.net/logo.png" alt="SoyProceso Logo">
+        </div>
+        
+        <div class="content">
+            <h1>¡Gracias por completar tu autodiagnóstico!</h1>
+            
+            <p>Hola,</p>
+            
+            <p>Hemos procesado exitosamente la información de tu autodiagnóstico. Hemos preparado un informe completo en formato PDF con los resultados y nuestras recomendaciones para optimizar tus procesos.</p>
+            
+            <div class="btn-container">
+                <!-- El enlace href se debe reemplazar dinámicamente en tu backend -->
+                <a href="{{pdf_download_link}}" class="btn">Descargar mi PDF</a>
+            </div>
+            
+            <p>Si tienes problemas para descargarlo, por favor contáctanos.</p>
+            
+            <div class="whatsapp-contact">
+                <p>¿Tienes dudas o necesitas ayuda personalizada?</p>
+                <a href="https://wa.me/573000000000" class="whatsapp-btn">Escríbenos por WhatsApp</a>
+            </div>
+        </div>
+        
+        <div class="footer">
+            <p class="footer-text">© 2026 SoyProceso. Todos los derechos reservados.</p>
+        </div>
+    </div>
+</body>
+</html>
