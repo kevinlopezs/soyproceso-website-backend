@@ -74,14 +74,16 @@ Deno.serve(async (req: Request) => {
         const transporter = nodemailer.createTransport({
           host: SMTP_HOSTNAME,
           port: SMTP_PORT,
-          secure: SMTP_PORT === 465, // true for port 465, false for other ports
+          secure: SMTP_PORT === 465,
           auth: {
             user: SMTP_USERNAME,
             pass: SMTP_PASSWORD,
           },
         });
 
-        const downloadUrl = `https://soyproceso.com/api/pdf-diagnostico?session_id=${session_id}`;
+        // Use the NEW secure backend-orchestrated download link
+        const downloadUrl = `https://xqjcexxltlixiddjbhfh.supabase.co/functions/v1/autodiagnostico-pdf-get?session_id=${session_id}`;
+        
         const emailBody = autodiagnosticoTemplate
           .replace("{{pdf_download_link}}", downloadUrl)
           .replace("https://wa.me/573000000000", "https://wa.me/573192467476");
@@ -94,12 +96,10 @@ Deno.serve(async (req: Request) => {
         });
 
         // Mark as sent in DB
-        const { error: finalUpdateError } = await supabase
+        await supabase
           .from("autodiagnostico_submissions")
           .update({ email_sent: true })
           .eq("id", session_id);
-
-        if (finalUpdateError) throw finalUpdateError;
 
         emailSentResult = true;
         console.log(`Email sent successfully to ${finalEmail}`);
