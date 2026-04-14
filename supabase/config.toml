@@ -25,6 +25,12 @@ verify_jwt = false
 [functions.experience-submit]
 verify_jwt = false
 
+[functions.whatsapp-webhook]
+verify_jwt = false
+
+[functions.whatsapp-send]
+verify_jwt = false
+
 [realtime]
 enabled = true
 
