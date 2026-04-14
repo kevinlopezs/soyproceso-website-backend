@@ -1,6 +1,6 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
-import { SmtpClient } from "https://deno.land/x/smtp@v0.7.0/mod.ts";
+import nodemailer from "npm:nodemailer";
 import { autodiagnosticoTemplate } from "../_shared/templates/autodiagnostico-email.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
@@ -27,7 +27,7 @@ Deno.serve(async (req: Request) => {
 
   try {
     const body = await req.json();
-    const { session_id, answers, email, score_data, pdf_generated, pdf_url } = body;
+    const { session_id, answers, email, score_data, pdf_generated } = body;
 
     if (!session_id) {
       throw new Error("session_id is required");
@@ -35,19 +35,18 @@ Deno.serve(async (req: Request) => {
 
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
+    // Get current record state
+    const { data: currentRecord, error: fetchError } = await supabase
+      .from("autodiagnostico_submissions")
+      .select("email, email_sent, score_data")
+      .eq("id", session_id)
+      .single();
+
+    if (fetchError) throw fetchError;
+
     // Build update object
     const updateData: any = {};
-    
-    if (answers) {
-      const { data: existingData } = await supabase
-        .from("autodiagnostico_submissions")
-        .select("answers")
-        .eq("id", session_id)
-        .single();
-      
-      updateData.answers = { ...(existingData?.answers || {}), ...answers };
-    }
-    
+    if (answers) updateData.answers = answers;
     if (email) updateData.email = email;
     if (score_data) updateData.score_data = score_data;
     if (pdf_generated !== undefined) updateData.pdf_generated = pdf_generated;
@@ -62,38 +61,60 @@ Deno.serve(async (req: Request) => {
       if (updateError) throw updateError;
     }
 
-    // Send Email if email is provided and pdf is generated or url is provided
-    if (email && (pdf_url || pdf_generated)) {
+    // Determine final email
+    const finalEmail = email || currentRecord?.email;
+    const isAlreadySent = currentRecord?.email_sent || false;
+
+    let emailSentResult = false;
+    let emailErrorDetail = null;
+
+    // Send Email if we have an email and it hasn't been sent yet
+    if (finalEmail && !isAlreadySent) {
       try {
-        const client = new SmtpClient();
-        await client.connectTLS({
-          hostname: SMTP_HOSTNAME,
+        const transporter = nodemailer.createTransport({
+          host: SMTP_HOSTNAME,
           port: SMTP_PORT,
-          username: SMTP_USERNAME,
-          password: SMTP_PASSWORD,
+          secure: SMTP_PORT === 465, // true for port 465, false for other ports
+          auth: {
+            user: SMTP_USERNAME,
+            pass: SMTP_PASSWORD,
+          },
         });
 
-        const finalUrl = pdf_url || `https://soyproceso.com/api/pdf-diagnostico?session_id=${session_id}`;
+        const downloadUrl = `https://soyproceso.com/api/pdf-diagnostico?session_id=${session_id}`;
         const emailBody = autodiagnosticoTemplate
-          .replace("{{pdf_download_link}}", finalUrl)
-          .replace("https://wa.me/573000000000", "https://wa.me/573123456789"); // Actual WhatsApp number if known
+          .replace("{{pdf_download_link}}", downloadUrl)
+          .replace("https://wa.me/573000000000", "https://wa.me/573192467476");
 
-        await client.send({
+        await transporter.sendMail({
           from: SENDER_EMAIL,
-          to: email,
-          subject: "Tu Autodiagnóstico de SoyProceso está listo",
-          content: emailBody,
+          to: finalEmail,
+          subject: "📋 Tu Autodiagnóstico de SoyProceso está listo",
           html: emailBody,
         });
 
-        await client.close();
-        console.log(`Email sent successfully to ${email}`);
+        // Mark as sent in DB
+        const { error: finalUpdateError } = await supabase
+          .from("autodiagnostico_submissions")
+          .update({ email_sent: true })
+          .eq("id", session_id);
+
+        if (finalUpdateError) throw finalUpdateError;
+
+        emailSentResult = true;
+        console.log(`Email sent successfully to ${finalEmail}`);
       } catch (emailError) {
         console.error("Failed to send email:", emailError);
+        emailErrorDetail = emailError.message;
       }
     }
 
-    return new Response(JSON.stringify({ success: true }), {
+    return new Response(JSON.stringify({ 
+      success: true, 
+      email_sent: emailSentResult,
+      already_sent: isAlreadySent,
+      error_detail: emailErrorDetail 
+    }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 200,
     });
