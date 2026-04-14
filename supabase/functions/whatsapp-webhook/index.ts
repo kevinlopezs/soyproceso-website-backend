@@ -160,15 +160,17 @@ Deno.serve(async (req: Request) => {
       const phoneNumber = contact?.wa_id || waId;
       const displayName = contact?.profile?.name || phoneNumber;
       
+      const msgType = (message.type || "").toLowerCase();
       let body = "";
-      if (message.type === "text") {
+      
+      if (msgType === "text") {
         body = message.text?.body || "";
-      } else if (message.type === "image") {
+      } else if (msgType === "image" && message.image?.id) {
         // Handle Image
         const cdnUrl = await handleWhatsAppMedia(message.image.id);
-        body = cdnUrl || "[Image fetch failed]";
+        body = cdnUrl || "[Error al procesar imagen]";
       } else {
-        body = `[${message.type} received]`;
+        body = `[Mensaje tipo ${msgType} recibido]`;
       }
 
       // Upsert Chat
