@@ -8,7 +8,10 @@ const GOOGLE_API_KEY = Deno.env.get("GOOGLE_CLOUD_PLATFORM_API_KEY");
 const BUNNY_NET_USERNAME = Deno.env.get("BUNNY_NET_USERNAME") || "soyproceso";
 const BUNNY_NET_ACCESS_KEY = Deno.env.get("BUNNY_NET_PASSWORD_API_ACCESS") || "";
 const BUNNY_NET_HOSTNAME = Deno.env.get("BUNNY_NET_HOSTNAME") || "br.storage.bunnycdn.com";
-const BUNNY_NET_CDN = Deno.env.get("BUNNY_NET_CDN") || "soyproceso.b-cdn.net";
+let BUNNY_NET_CDN = Deno.env.get("BUNNY_NET_CDN") || "soyproceso.b-cdn.net";
+
+// Clean CDN URL (remove protocol if present)
+BUNNY_NET_CDN = BUNNY_NET_CDN.replace(/^https?:\/\//, "").replace(/\/$/, "");
 
 Deno.serve(async (req: Request) => {
   const headers = {
@@ -26,7 +29,7 @@ Deno.serve(async (req: Request) => {
 
     console.log(`Generating image for: ${title}`);
 
-    // STEP 1: PROMPT SYNTHESIS
+    // STEP 1: PROMPT SYNTHESIS (Using Gemini 2.5 Flash)
     const synthUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GOOGLE_API_KEY}`;
     const synthRes = await fetch(synthUrl, {
         method: "POST",
@@ -109,7 +112,7 @@ Deno.serve(async (req: Request) => {
         success: true, 
         url: `https://${BUNNY_NET_CDN}/${bunnyPath}`,
         model: chosenModel,
-        v: "4.0.1-PROD"
+        v: "4.0.2-FIXED"
     }), { headers });
 
   } catch (error: any) {
