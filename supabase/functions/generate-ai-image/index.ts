@@ -41,49 +41,31 @@ Deno.serve(async (req: Request) => {
     const synthData = await synthRes.json();
     const visualPrompt = synthData?.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || `Professional corporate photography for ${title}`;
 
-    let base64Image = null;
-    let chosenModel = "imagen-4.0";
-
-    // STEP 2: TRY IMAGEN 4.0
-    console.log("Attempting Imagen 4.0...");
-    const imagenUrl = `https://generativelanguage.googleapis.com/v1beta/models/imagen-4.0-generate-001:predict?key=${GOOGLE_API_KEY}`;
-    const imagenRes = await fetch(imagenUrl, {
+    // STEP 2: GENERATE IMAGE USING NANO BANANA 2 (gemini-3.1-flash-image-preview)
+    // We skip Imagen to avoid credit consumption, using the Free Tier compatible flash models.
+    console.log("Attempting Gemini 3.1 Flash Image Preview (Nano Banana 2)...");
+    const chosenModel = "gemini-3.1-flash-image-preview";
+    const imageUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-image-preview:generateContent?key=${GOOGLE_API_KEY}`;
+    const imageRes = await fetch(imageUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-            instances: [{ prompt: visualPrompt }],
-            parameters: { sampleCount: 1, aspectRatio: "16:9" }
+            contents: [{ parts: [{ text: `Generate a professional 16:9 image based on this prompt: ${visualPrompt}` }] }]
         }),
     });
-
-    const imagenData = await imagenRes.json();
-    if (imagenRes.ok && imagenData.predictions?.[0]) {
-        base64Image = imagenData.predictions[0].bytesBase64Encoded || imagenData.predictions[0].image?.bytesBase64Encoded;
+    const imageData = await imageRes.json();
+    
+    let base64Image = null;
+    const imagePart = imageData?.candidates?.[0]?.content?.parts?.find((p: any) => p.inlineData?.mimeType?.startsWith("image/") || p.inline_data?.mime_type?.startsWith("image/"));
+    
+    if (imagePart) {
+        base64Image = imagePart.inlineData?.data || imagePart.inline_data?.data;
     } else {
-        console.warn("Imagen 4 failed or restricted (Free Plan). Trying Fallback...");
-        // STEP 3: FALLBACK TO GEMINI FLASH IMAGE
-        chosenModel = "gemini-2.5-flash-image";
-        const fallbackUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent?key=${GOOGLE_API_KEY}`;
-        const fallbackRes = await fetch(fallbackUrl, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-                contents: [{ parts: [{ text: `Generate a professional 16:9 image based on this prompt: ${visualPrompt}` }] }]
-            }),
-        });
-        const fallbackData = await fallbackRes.json();
-        
-        // Gemini Image models return actual image parts
-        const imagePart = fallbackData?.candidates?.[0]?.content?.parts?.find((p: any) => p.inline_data?.mime_type?.startsWith("image/"));
-        if (imagePart) {
-            base64Image = imagePart.inline_data.data;
-        } else {
-            return new Response(JSON.stringify({ 
-                success: false, 
-                error: "All image generation methods failed for Free Tier.", 
-                details: { imagenError: imagenData, fallbackError: fallbackData } 
-            }), { headers });
-        }
+        return new Response(JSON.stringify({ 
+            success: false, 
+            error: "Image generation failed using Free Tier model.", 
+            details: { errorData: imageData } 
+        }), { headers });
     }
 
     if (!base64Image) throw new Error("Could not extract image data from any model.");
