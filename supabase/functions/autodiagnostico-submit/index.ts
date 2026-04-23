@@ -86,7 +86,8 @@ Deno.serve(async (req: Request) => {
         
         const emailBody = autodiagnosticoTemplate
           .replace("{{pdf_download_link}}", downloadUrl)
-          .replace("https://wa.me/573000000000", "https://wa.me/573192467476");
+          .replace("https://wa.me/573000000000", "https://wa.me/573186392462");
+
 
         await transporter.sendMail({
           from: SENDER_EMAIL,
