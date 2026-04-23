@@ -214,7 +214,7 @@ export const autodiagnosticoTemplate = `
                 <td>
                     <div class="contact-box">
                         <p class="contact-title">¿Necesitas ayuda con el plan de intervención?</p>
-                        <a href="https://wa.me/573192467476" class="wa-btn">Hablar con un experto</a>
+                        <a href="https://wa.me/573186392462" class="wa-btn">Hablar con un experto</a>
                     </div>
                 </td>
             </tr>

@@ -16,9 +16,9 @@
   - `handle_updated_at()` - Actualiza timestamps automáticamente
   - `handle_post_published()` - Establece published_at cuando se publica un post
 - Desencadenadores configurados para automatización
+- **Edge Functions desplegadas:** `autodiagnostico-submit`, `autodiagnostico-init`, `autodiagnostico-pdf-get`, `bunny-upload`, `blog-webhook`
 
 🚧 **PENDIENTE DE DESPLIEGUE:**
-- Edge Functions (necesitan despliegue manual)
 - Configuración de variables de entorno en Supabase
 - Pruebas de integración con frontend
 
