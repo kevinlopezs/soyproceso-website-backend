@@ -1,37 +1,56 @@
-const { Client } = require('pg');
 const fs = require('fs');
 
-const client = new Client({
-  connectionString: 'postgresql://postgres.xqjcexxltlixiddjbhfh:Kx35WCQeUMuboPqc@aws-0-us-west-2.pooler.supabase.com:6543/postgres'
-});
+const PROJECT_REF = 'xqjcexxltlixiddjbhfh';
+const TOKEN = process.env.SUPABASE_ACCESS_TOKEN || process.env.SUPABASE_SOYPROCESO_ACCESSTOKEN;
 
 const tables = [
-  'blog_categories',
-  'profiles',
-  'blog_posts',
-  'blog_post_categories',
-  'uploaded_files',
-  'experience_campaigns',
-  'experience_submissions',
-  'wa_chats',
-  'wa_messages',
-  'autodiagnostico_submissions',
-  'email_unsubscriptions'
+  { schema: 'auth', name: 'users' },
+  { schema: 'public', name: 'blog_categories' },
+  { schema: 'public', name: 'profiles' },
+  { schema: 'public', name: 'blog_posts' },
+  { schema: 'public', name: 'blog_post_categories' },
+  { schema: 'public', name: 'uploaded_files' },
+  { schema: 'public', name: 'experience_campaigns' },
+  { schema: 'public', name: 'experience_submissions' },
+  { schema: 'public', name: 'wa_chats' },
+  { schema: 'public', name: 'wa_messages' },
+  { schema: 'public', name: 'autodiagnostico_submissions' },
+  { schema: 'public', name: 'email_unsubscriptions' }
 ];
 
 async function run() {
-  await client.connect();
-  let sql = '-- Seed data exported from production via pg pooler\n\n';
+  if (!TOKEN) {
+    console.error("Missing SUPABASE_ACCESS_TOKEN in .env");
+    process.exit(1);
+  }
+
+  let sql = '-- Seed data exported from production via Supabase Management API\n\n';
   
   for (const table of tables) {
-    console.log(`Exporting ${table}...`);
+    console.log(`Exporting ${table.schema}.${table.name}...`);
     try {
-      const res = await client.query(`SELECT * FROM public.${table}`);
-      const data = res.rows;
+      const res = await fetch(`https://api.supabase.com/v1/projects/${PROJECT_REF}/database/query`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${TOKEN}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ query: `SELECT * FROM ${table.schema}.${table.name}` })
+      });
+      
+      if (!res.ok) {
+        throw new Error(`API Error: ${res.status} ${await res.text()}`);
+      }
+
+      const data = await res.json();
       if (!data || data.length === 0) continue;
       
-      const keys = Object.keys(data[0]);
-      sql += `-- Data for ${table}\n`;
+      let keys = Object.keys(data[0]);
+      if (table.schema === 'auth' && table.name === 'users') {
+          keys = keys.filter(k => k !== 'confirmed_at' && k !== 'is_super_admin' && k !== 'is_anonymous');
+      }
+      
+      sql += `-- Data for ${table.schema}.${table.name}\n`;
       
       for (const row of data) {
         const values = keys.map(k => {
@@ -39,12 +58,23 @@ async function run() {
           if (val === null) return 'NULL';
           if (typeof val === 'string') return "'" + val.replace(/'/g, "''") + "'";
           if (typeof val === 'object') {
-             if (val instanceof Date) return "'" + val.toISOString() + "'";
+             if (val instanceof Date || (typeof val === 'string' && !isNaN(Date.parse(val)))) return "'" + new Date(val).toISOString() + "'";
              return "'" + JSON.stringify(val).replace(/'/g, "''") + "'";
           }
+          if (typeof val === 'boolean') return val ? 'TRUE' : 'FALSE';
           return val;
         });
-        sql += `INSERT INTO public.${table} ("${keys.join('", "')}") VALUES (${values.join(', ')});\n`;
+        
+        let conflictClause = '';
+        if (table.name === 'profiles' || table.name === 'users') {
+          const updateSet = keys.filter(k => k !== 'id').map(k => `"${k}" = EXCLUDED."${k}"`).join(', ');
+          if (updateSet) {
+             conflictClause = ` ON CONFLICT ("id") DO UPDATE SET ${updateSet}`;
+          } else {
+             conflictClause = ` ON CONFLICT ("id") DO NOTHING`;
+          }
+        }
+        sql += `INSERT INTO ${table.schema}.${table.name} ("${keys.join('", "')}") VALUES (${values.join(', ')})${conflictClause};\n`;
       }
       sql += '\n';
     } catch(err) {
@@ -54,7 +84,6 @@ async function run() {
   
   fs.writeFileSync('supabase-staging/supabase/seed.sql', sql);
   console.log('Export complete.');
-  await client.end();
 }
 
 run();

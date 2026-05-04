@@ -48,7 +48,7 @@ def main():
     # 1. Exportar los datos desde producción
     # Usamos export_data.js porque maneja correctamente la conexión con el Pooler de Supabase
     # y formatea la data limpia para evitar conflictos con PostgreSQL 15 local.
-    if not run_command("node export_data.js", "Descargando datos desde producción"):
+    if not run_command("node --env-file=.env export_data.js", "Descargando datos desde producción"):
         sys.exit(1)
         
     # 2. Resetear la base de datos de staging
