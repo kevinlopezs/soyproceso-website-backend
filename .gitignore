@@ -2,3 +2,8 @@
 supabase/.temp/
 .DS_Store
 node_modules/
+
+# Staging Environment
+.env.staging
+supabase-staging/supabase/seed.sql
+supabase-staging/supabase/.temp/

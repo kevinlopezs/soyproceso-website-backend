@@ -162,11 +162,3 @@ CREATE INDEX IF NOT EXISTS idx_blog_posts_published_at ON public.blog_posts(publ
 CREATE INDEX IF NOT EXISTS idx_blog_posts_author_id ON public.blog_posts(author_id);
 CREATE INDEX IF NOT EXISTS idx_blog_posts_created_at ON public.blog_posts(created_at);
 CREATE INDEX IF NOT EXISTS idx_blog_categories_slug ON public.blog_categories(slug);
-
--- Insert default categories
-INSERT INTO public.blog_categories (name, slug, description) VALUES
-    ('Tecnología', 'tecnologia', 'Artículos sobre tecnología y desarrollo'),
-    ('Productividad', 'productividad', 'Consejos y herramientas para mejorar la productividad'),
-    ('Desarrollo Personal', 'desarrollo-personal', 'Crecimiento y desarrollo personal'),
-    ('Negocios', 'negocios', 'Estrategias y consejos para negocios')
-ON CONFLICT (slug) DO NOTHING;

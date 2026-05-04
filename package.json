@@ -7,7 +7,14 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "setup": "echo 'Setup instructions: configure .env file and run supabase commands'",
     "deploy:migrations": "supabase db push",
-    "deploy:functions": "supabase functions deploy bunny-upload && supabase functions deploy blog-webhook"
+    "deploy:functions": "supabase functions deploy bunny-upload && supabase functions deploy blog-webhook",
+    "staging:start": "cd supabase-staging && supabase start",
+    "staging:stop": "cd supabase-staging && supabase stop",
+    "staging:reset": "cd supabase-staging && supabase db reset",
+    "staging:status": "cd supabase-staging && supabase status",
+    "staging:logs": "cd supabase-staging && supabase logs",
+    "staging:seed": "cd supabase-staging && supabase db reset --db-url postgresql://postgres:postgres@localhost:52322/postgres",
+    "staging:functions": "cd supabase-staging && supabase functions serve --env-file ../.env.staging"
   },
   "keywords": [
     "supabase",
@@ -20,5 +27,8 @@
   "license": "MIT",
   "devDependencies": {
     "@supabase/supabase-js": "^2.39.0"
+  },
+  "dependencies": {
+    "pg": "^8.20.0"
   }
 }

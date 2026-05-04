@@ -1,0 +1,58 @@
+project_id = "soyproceso_backend_staging"
+
+[api]
+port = 52321
+max_rows = 1000
+
+[db]
+port = 52322
+shadow_port = 52320
+major_version = 15
+
+[studio]
+port = 52323
+
+[inbucket]
+port = 52324
+smtp_port = 52325
+pop3_port = 52326
+
+[analytics]
+port = 52327
+enabled = true
+
+[auth]
+site_url = "http://localhost:3001"
+additional_redirect_urls = [
+  "http://localhost:3001",
+  "http://localhost:3001/auth/callback",
+  "http://localhost:3000",
+  "http://localhost:3000/auth/callback"
+]
+
+[storage]
+file_size_limit = 52428800
+
+[functions.bunny-upload]
+verify_jwt = false
+
+[functions.blog-webhook]
+verify_jwt = true
+
+[functions.experience-init]
+verify_jwt = false
+
+[functions.experience-submit]
+verify_jwt = false
+
+[functions.autodiagnostico-submit]
+verify_jwt = false
+
+[functions.whatsapp-webhook]
+verify_jwt = false
+
+[functions.whatsapp-send]
+verify_jwt = false
+
+[realtime]
+enabled = true
