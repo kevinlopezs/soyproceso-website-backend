@@ -8,14 +8,17 @@ const BUNNY_NET_REGION = Deno.env.get("BUNNY_NET_HOSTNAME") || "br.storage.bunny
 const BUNNY_CDN_URL = Deno.env.get("BUNNY_NET_CDN") || "https://soyproceso.b-cdn.net";
 const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB max file size
 
-// Allowed MIME types for images
+// Allowed MIME types: images plus client-report presentation files (PDF / PPTX / PPT)
 const ALLOWED_MIME_TYPES = [
   "image/jpeg",
   "image/jpg",
   "image/png",
   "image/gif",
   "image/webp",
-  "image/svg+xml"
+  "image/svg+xml",
+  "application/pdf",
+  "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+  "application/vnd.ms-powerpoint"
 ];
 
 interface UploadRequest {
@@ -96,6 +99,12 @@ Deno.serve(async (req: Request) => {
     if (!ALLOWED_MIME_TYPES.includes(file.type.toLowerCase())) {
       console.error(`[Edge Function] Invalid type: ${file.type}`);
       throw new Error(`File type ${file.type} not allowed.`);
+    }
+
+    // 4b. Validate file size
+    if (file.size > MAX_FILE_SIZE) {
+      console.error(`[Edge Function] File too large: ${file.size}`);
+      throw new Error(`File exceeds the maximum allowed size of ${MAX_FILE_SIZE / (1024 * 1024)}MB.`);
     }
 
     // 5. Generate path
