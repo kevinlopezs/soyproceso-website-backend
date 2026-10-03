@@ -2,3 +2,5 @@
 supabase/.temp/
 .DS_Store
 node_modules/
+.mcp.json
+.vscode/mcp.json

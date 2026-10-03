@@ -11,7 +11,7 @@ additional_redirect_urls = [
 max_rows = 1000
 
 [storage]
-file_size_limit = 52428800  # 50MB in bytes
+file_size_limit = "50MiB"
 
 [functions.bunny-upload]
 verify_jwt = false
@@ -32,6 +32,10 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.whatsapp-send]
+verify_jwt = false
+
+# Autoriza por cabecera x-cron-secret (pg_cron) o por sesión del panel de admin.
+[functions.secop-sync]
 verify_jwt = false
 
 [realtime]

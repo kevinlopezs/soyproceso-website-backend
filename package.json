@@ -7,7 +7,8 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "setup": "echo 'Setup instructions: configure .env file and run supabase commands'",
     "deploy:migrations": "supabase db push",
-    "deploy:functions": "supabase functions deploy bunny-upload && supabase functions deploy blog-webhook"
+    "deploy:functions": "supabase functions deploy bunny-upload && supabase functions deploy blog-webhook && supabase functions deploy secop-sync",
+    "test:secop": "deno test --config supabase/functions/secop-sync/deno.json supabase/functions/_shared/secop-rules.test.ts"
   },
   "keywords": [
     "supabase",
