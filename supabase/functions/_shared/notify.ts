@@ -1,5 +1,6 @@
-// Envío de avisos por Telegram y por correo (Amazon SES v2).
-import { AwsClient } from "npm:aws4fetch@1.0.20";
+// Envío de avisos por Telegram y por correo (Amazon SES por SMTP, la misma configuración
+// que usa autodiagnostico-submit).
+import nodemailer from "npm:nodemailer@6";
 
 export interface Aviso {
   asunto: string;
@@ -46,34 +47,29 @@ export async function enviarTelegram(mensaje: string): Promise<string | null> {
 }
 
 export async function enviarCorreo(aviso: Aviso): Promise<string | null> {
-  const region = env("SES_REGION");
-  const accessKeyId = env("SES_ACCESS_KEY_ID");
-  const secretAccessKey = env("SES_SECRET_ACCESS_KEY");
-  const desde = env("SECOP_EMAIL_FROM");
-  const para = env("SECOP_EMAIL_TO").split(",").map((s) => s.trim()).filter(Boolean);
-  if (!region || !accessKeyId || !secretAccessKey || !desde || para.length === 0) {
-    return "Correo sin configurar (SES_REGION / SES_ACCESS_KEY_ID / SES_SECRET_ACCESS_KEY / SECOP_EMAIL_FROM / SECOP_EMAIL_TO)";
+  const host = env("AWS_SES_SMTP_ENDPOINT");
+  const port = Number(env("AWS_SES_SMTP_PORT") || "587");
+  const user = env("AWS_SMTP_USER_NAME");
+  const pass = env("AWS_SMTP_PASSWORD");
+  const desde = env("SECOP_EMAIL_FROM") || env("AWS_SES_SENDER_EMAIL");
+  // Sin SECOP_EMAIL_TO, el aviso llega al buzón remitente de Soy Proceso.
+  const para = (env("SECOP_EMAIL_TO") || desde).split(",").map((s) => s.trim()).filter(Boolean);
+  if (!host || !user || !pass || !desde || para.length === 0) {
+    return "Correo sin configurar (AWS_SES_SMTP_ENDPOINT / AWS_SMTP_USER_NAME / AWS_SMTP_PASSWORD / AWS_SES_SENDER_EMAIL)";
   }
-  const aws = new AwsClient({ accessKeyId, secretAccessKey, region, service: "ses" });
-  const r = await aws.fetch(`https://email.${region}.amazonaws.com/v2/email/outbound-emails`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      FromEmailAddress: desde,
-      Destination: { ToAddresses: para },
-      Content: {
-        Simple: {
-          Subject: { Data: aviso.asunto, Charset: "UTF-8" },
-          Body: {
-            Html: { Data: aviso.html, Charset: "UTF-8" },
-            Text: { Data: aviso.texto, Charset: "UTF-8" },
-          },
-        },
-      },
-    }),
-  });
-  if (!r.ok) return `SES respondió ${r.status}: ${await r.text()}`;
-  return null;
+  try {
+    const transporte = nodemailer.createTransport({ host, port, secure: port === 465, auth: { user, pass } });
+    await transporte.sendMail({
+      from: `Licitaciones Soy Proceso <${desde}>`,
+      to: para.join(", "),
+      subject: aviso.asunto,
+      html: aviso.html,
+      text: aviso.texto,
+    });
+    return null;
+  } catch (e) {
+    return `Correo falló: ${e instanceof Error ? e.message : String(e)}`;
+  }
 }
 
 // Envía por ambos canales; devuelve los errores (vacío si todo salió bien).
