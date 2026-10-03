@@ -34,6 +34,10 @@ verify_jwt = false
 [functions.whatsapp-send]
 verify_jwt = false
 
+# Autoriza por cabecera x-cron-secret (pg_cron) o por sesión del panel de admin.
+[functions.secop-sync]
+verify_jwt = false
+
 [realtime]
 enabled = true
 
