@@ -7,6 +7,8 @@ export interface Aviso {
   html: string; // HTML para correo
   telegram: string; // HTML con el subconjunto que acepta Telegram (<b>, <i>, <a>)
   texto: string; // versión en texto plano
+  remitente?: string; // nombre visible del remitente (por defecto "Licitaciones Soy Proceso")
+  para?: string[]; // destinatarios (por defecto SECOP_EMAIL_TO o el buzón remitente)
 }
 
 const env = (k: string) => Deno.env.get(k) ?? "";
@@ -53,14 +55,16 @@ export async function enviarCorreo(aviso: Aviso): Promise<string | null> {
   const pass = env("AWS_SMTP_PASSWORD");
   const desde = env("SECOP_EMAIL_FROM") || env("AWS_SES_SENDER_EMAIL");
   // Sin SECOP_EMAIL_TO, el aviso llega al buzón remitente de Soy Proceso.
-  const para = (env("SECOP_EMAIL_TO") || desde).split(",").map((s) => s.trim()).filter(Boolean);
+  const para = aviso.para?.length
+    ? aviso.para
+    : (env("SECOP_EMAIL_TO") || desde).split(",").map((s) => s.trim()).filter(Boolean);
   if (!host || !user || !pass || !desde || para.length === 0) {
     return "Correo sin configurar (AWS_SES_SMTP_ENDPOINT / AWS_SMTP_USER_NAME / AWS_SMTP_PASSWORD / AWS_SES_SENDER_EMAIL)";
   }
   try {
     const transporte = nodemailer.createTransport({ host, port, secure: port === 465, auth: { user, pass } });
     await transporte.sendMail({
-      from: `Licitaciones Soy Proceso <${desde}>`,
+      from: `${aviso.remitente ?? "Licitaciones Soy Proceso"} <${desde}>`,
       to: para.join(", "),
       subject: aviso.asunto,
       html: aviso.html,

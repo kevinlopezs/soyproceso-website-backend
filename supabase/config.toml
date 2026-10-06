@@ -42,6 +42,10 @@ verify_jwt = false
 [functions.ses-events]
 verify_jwt = false
 
+# Landing pública del cotizador (Google Ads); valida datos y escribe con service role.
+[functions.cotizador-lead]
+verify_jwt = false
+
 [realtime]
 enabled = true
 
