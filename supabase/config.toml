@@ -38,10 +38,6 @@ verify_jwt = false
 [functions.secop-sync]
 verify_jwt = false
 
-# SNS de Amazon SES; autoriza por ?token= (SES_EVENTS_TOKEN) y TopicArn (SES_EVENTS_TOPIC_ARN).
-[functions.ses-events]
-verify_jwt = false
-
 # Landing pública del cotizador (Google Ads); valida datos y escribe con service role.
 [functions.cotizador-lead]
 verify_jwt = false
