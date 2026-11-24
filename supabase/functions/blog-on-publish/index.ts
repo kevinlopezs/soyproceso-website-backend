@@ -12,6 +12,7 @@ import { newsletterHtml, newsletterTexto } from "../_shared/templates/blog-newsl
 import { resumenPost, SITIO, urlDePost } from "../_shared/blog-utils.ts";
 import { avisarIndexNow, gscConfigurado, reenviarSitemap } from "../_shared/gsc.ts";
 import { igualesSeguro } from "../_shared/blog-utils.ts";
+import { esAdmin } from "../_shared/admin.ts";
 
 const env = (k: string) => Deno.env.get(k) ?? "";
 const cors = {
@@ -109,9 +110,7 @@ Deno.serve(async (req) => {
   const cab = req.headers.get("x-publish-secret") ?? "";
   const desdeTrigger = !!secreto && !!cab && igualesSeguro(cab, secreto);
   if (!desdeTrigger) {
-    const jwt = (req.headers.get("authorization") ?? "").replace(/^Bearer\s+/i, "");
-    const { data } = jwt ? await sb.auth.getUser(jwt) : { data: { user: null } };
-    if (!data?.user) return responder({ error: "No autorizado" }, 401);
+    if (!(await esAdmin(sb, req.headers.get("authorization")))) return responder({ error: "No autorizado" }, 401);
   }
 
   const d = await req.json().catch(() => ({}));

@@ -6,6 +6,7 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
 import { enviarTelegram, escapar } from "../_shared/notify.ts";
 import { gscConfigurado, inspeccionarUrl } from "../_shared/gsc.ts";
+import { esAdmin } from "../_shared/admin.ts";
 import { estaIndexada, igualesSeguro, traducirCobertura, urlDePost, urlInspeccionGsc } from "../_shared/blog-utils.ts";
 
 const env = (k: string) => Deno.env.get(k) ?? "";
@@ -74,9 +75,7 @@ Deno.serve(async (req) => {
   const secreto = env("BLOG_ON_PUBLISH_SECRET");
   const cab = req.headers.get("x-publish-secret") ?? "";
   if (!(secreto && cab && igualesSeguro(cab, secreto))) {
-    const jwt = (req.headers.get("authorization") ?? "").replace(/^Bearer\s+/i, "");
-    const { data } = jwt ? await sb.auth.getUser(jwt) : { data: { user: null } };
-    if (!data?.user) return responder({ error: "No autorizado" }, 401);
+    if (!(await esAdmin(sb, req.headers.get("authorization")))) return responder({ error: "No autorizado" }, 401);
   }
   if (!gscConfigurado()) return responder({ error: "GSC_SERVICE_ACCOUNT_JSON sin configurar" }, 503);
 

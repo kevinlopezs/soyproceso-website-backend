@@ -88,6 +88,30 @@ async function registrar(
   return { id: ex.id as string, nuevo: false, activadoAhora };
 }
 
+// Cada lead es también un usuario de Supabase Auth con rol 'lead' (profiles.role; sin permisos).
+// Se crea desde aquí con la API de admin, ya verificada su identidad (token de Google u OTP), y guarda de qué
+// blog viene. No se le entrega ninguna sesión.
+async function vincularUsuario(sb: Sb, subscriberId: string, p: { email: string; nombre?: string | null; avatar?: string | null; ctx: Contexto }) {
+  const email = p.email.trim().toLowerCase();
+  let userId: string | null = null;
+  const { data, error } = await sb.auth.admin.createUser({
+    email,
+    email_confirm: true,
+    user_metadata: {
+      full_name: p.nombre ?? "", avatar_url: p.avatar ?? null, signup_source: "blog",
+      source_slug: p.ctx.slug, source_post_id: p.ctx.post_id,
+    },
+  });
+  if (!error) userId = data.user?.id ?? null;
+  if (!userId) {
+    // Ya existía (otro blog o el admin): se enlaza sin tocar su rol.
+    const { data: perfil } = await sb.from("profiles").select("id").ilike("email", email).maybeSingle();
+    userId = perfil?.id ?? null;
+  }
+  if (userId) await sb.from("blog_subscribers").update({ user_id: userId }).eq("id", subscriberId);
+  return userId;
+}
+
 async function evento(sb: Sb, subscriberId: string, type: string, ctx: Contexto, meta: Record<string, unknown> = {}) {
   await sb.from("blog_subscriber_events").insert({ subscriber_id: subscriberId, type, post_id: ctx.post_id, meta: { slug: ctx.slug, ...meta } });
 }
@@ -139,6 +163,7 @@ Deno.serve(async (req) => {
         sub: String(payload.sub ?? ""), metodo: "google", activo: true, ctx,
       });
       if (r.nuevo || r.activadoAhora) {
+        await vincularUsuario(sb, r.id, { email, nombre, avatar: typeof payload.picture === "string" ? payload.picture : null, ctx });
         await evento(sb, r.id, "signup", ctx, { method: "google" });
         await evento(sb, r.id, "verified", ctx, { method: "google" });
         await avisarLead(email, nombre, "google", ctx);
@@ -194,6 +219,7 @@ Deno.serve(async (req) => {
       await sb.from("blog_subscriber_otps").update({ consumed_at: new Date().toISOString() }).eq("id", otp.id);
       const r = await registrar(sb, { email, metodo: "email", activo: true, ctx });
       if (r.activadoAhora) {
+        await vincularUsuario(sb, r.id, { email, nombre: sub.full_name, ctx });
         await evento(sb, r.id, "verified", ctx, { method: "email" });
         await avisarLead(email, sub.full_name, "email", ctx);
       }

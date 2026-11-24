@@ -1,10 +1,9 @@
 -- Leads orgánicos del blog + newsletter + estado de indexación en Google.
 -- Migración SOLO aditiva: no toca blog_posts ni sus políticas.
 --
--- Los suscriptores NO usan Supabase Auth: en este proyecto "cualquier usuario autenticado = admin"
--- (ver 20260711194614_fix_admin_policies_to_match_authenticated_convention.sql), así que un lead con
--- sesión tendría permisos de admin. Aquí viven en tablas propias que solo escriben las Edge Functions
--- (service role). El admin las lee con su sesión (policy select para authenticated).
+-- Cada suscriptor es además un usuario de Supabase Auth con rol 'lead' (profiles.role, ver
+-- 20261124183133_roles_admin_leads.sql): no tiene ningún permiso, solo existe para identificarlo.
+-- Estas tablas las escriben únicamente las Edge Functions (service role); el admin las lee con is_admin().
 
 create table if not exists public.blog_subscribers (
   id uuid primary key default gen_random_uuid(),
@@ -12,6 +11,7 @@ create table if not exists public.blog_subscribers (
   full_name text,
   avatar_url text,
   google_sub text,
+  user_id uuid references auth.users(id) on delete set null,
   signup_method text not null check (signup_method in ('google', 'email')),
   status text not null default 'pending_verification'
     check (status in ('pending_verification', 'active', 'unsubscribed')),
@@ -30,6 +30,7 @@ create table if not exists public.blog_subscribers (
 );
 create unique index if not exists blog_subscribers_email_key on public.blog_subscribers (lower(email));
 create unique index if not exists blog_subscribers_unsub_token_key on public.blog_subscribers (unsubscribe_token);
+create index if not exists blog_subscribers_user_idx on public.blog_subscribers (user_id);
 create index if not exists blog_subscribers_status_idx on public.blog_subscribers (status);
 create index if not exists blog_subscribers_source_post_idx on public.blog_subscribers (source_post_id);
 
@@ -88,7 +89,7 @@ create table if not exists public.blog_index_status (
   notified_at timestamptz
 );
 
--- RLS: solo lectura para el admin (authenticated). Nada para anon. Escriben las Edge Functions (service role).
+-- RLS: solo lectura para el admin (rol admin). Nada para anon ni para leads. Escriben las Edge Functions (service role).
 alter table public.blog_subscribers enable row level security;
 alter table public.blog_subscriber_otps enable row level security;
 alter table public.blog_email_sends enable row level security;
@@ -96,13 +97,13 @@ alter table public.blog_subscriber_events enable row level security;
 alter table public.blog_index_status enable row level security;
 
 drop policy if exists "Admin lee suscriptores" on public.blog_subscribers;
-create policy "Admin lee suscriptores" on public.blog_subscribers for select to authenticated using (true);
+create policy "Admin lee suscriptores" on public.blog_subscribers for select to authenticated using (public.is_admin());
 drop policy if exists "Admin lee envios" on public.blog_email_sends;
-create policy "Admin lee envios" on public.blog_email_sends for select to authenticated using (true);
+create policy "Admin lee envios" on public.blog_email_sends for select to authenticated using (public.is_admin());
 drop policy if exists "Admin lee eventos" on public.blog_subscriber_events;
-create policy "Admin lee eventos" on public.blog_subscriber_events for select to authenticated using (true);
+create policy "Admin lee eventos" on public.blog_subscriber_events for select to authenticated using (public.is_admin());
 drop policy if exists "Admin lee indexacion" on public.blog_index_status;
-create policy "Admin lee indexacion" on public.blog_index_status for select to authenticated using (true);
+create policy "Admin lee indexacion" on public.blog_index_status for select to authenticated using (public.is_admin());
 -- blog_subscriber_otps: sin policies (nadie la lee salvo el service role).
 
 -- ------------------------------------------------------------------------------------------

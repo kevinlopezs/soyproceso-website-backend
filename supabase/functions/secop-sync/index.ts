@@ -19,6 +19,7 @@
 // pendientes de un proceso, sin sincronizar lo demás.
 
 import { createClient, type SupabaseClient } from "npm:@supabase/supabase-js@2";
+import { esAdmin } from "../_shared/admin.ts";
 import {
   aFila,
   diferencias,
@@ -54,10 +55,7 @@ type Origen = "cron" | "panel";
 async function autorizado(req: Request, db: SupabaseClient): Promise<Origen | null> {
   const secreto = env("SECOP_CRON_SECRET");
   if (secreto && req.headers.get("x-cron-secret") === secreto) return "cron";
-  const token = (req.headers.get("Authorization") ?? "").replace(/^Bearer\s+/i, "");
-  if (!token) return null;
-  const { data } = await db.auth.getUser(token);
-  return data.user ? "panel" : null;
+  return (await esAdmin(db, req.headers.get("Authorization"))) ? "panel" : null;
 }
 
 const cop = (n: number | null) =>
