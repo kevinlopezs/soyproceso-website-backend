@@ -19,7 +19,7 @@
 // pendientes de un proceso, sin sincronizar lo demás.
 
 import { createClient, type SupabaseClient } from "npm:@supabase/supabase-js@2";
-import { esAdmin } from "../_shared/admin.ts";
+import { ADMIN_EMAIL, esAdmin } from "../_shared/admin.ts";
 import {
   aFila,
   diferencias,
@@ -487,13 +487,14 @@ async function sincronizar(db: SupabaseClient, origen: Origen): Promise<Resumen 
   const aviso = armarAviso((porAvisar ?? []) as unknown as EventoPendiente[]);
   let erroresAviso: string[] = [];
   if (aviso) {
-    erroresAviso = await notificar(aviso);
+    erroresAviso = await notificar({ ...aviso, para: [ADMIN_EMAIL] }); // solo al admin
     // Si al menos un canal funcionó, se marcan como avisados.
     if (erroresAviso.length < 2) {
       await db.from("secop_eventos").update({ notificado: true }).in("id", (porAvisar ?? []).map((e) => e.id));
     }
   } else if (r.primeraCarga) {
     erroresAviso = await notificar({
+      para: [ADMIN_EMAIL], // solo al admin
       asunto: "SECOP: monitor activado",
       telegram: `<b>SECOP · Soy Proceso</b>\nMonitor activado: ${r.nuevos} procesos aptos cargados de los últimos ${VENTANA_DIAS} días.\n<a href="${PANEL_URL}">Ver en el panel</a>`,
       html: `<p>Monitor activado: ${r.nuevos} procesos aptos cargados de los últimos ${VENTANA_DIAS} días.</p><p><a href="${PANEL_URL}">Ver en el panel</a></p>`,
