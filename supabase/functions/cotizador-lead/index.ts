@@ -197,7 +197,7 @@ Deno.serve(async (req) => {
 
     const { data: lead, error: leerError } = await supabase
       .from("cotizador_leads")
-      .select("id, completed_at, video_max_pct, email_enviado, equipo_notificado")
+      .select("id, completed_at, video_max_pct, email_enviado, equipo_notificado, ip_address")
       .eq("id", leadId)
       .single();
     if (leerError || !lead) return responder({ error: "Lead no encontrado" }, 404);
@@ -255,6 +255,25 @@ Deno.serve(async (req) => {
       if (!estimacionValida(body.estimacion)) return responder({ error: "Estimación inválida" }, 422);
 
       const est = body.estimacion as Estimacion;
+
+      // Lista de bloqueo (spam): se guarda el lead como perdido, sin correo ni aviso al equipo.
+      if (await estaBloqueado(email, lead.ip_address as string | null)) {
+        const { error } = await supabase.from("cotizador_leads").update({
+          canal_envio: canal,
+          email,
+          whatsapp,
+          nombre,
+          empresa,
+          estimacion: est,
+          ultimo_paso: "cotizacion",
+          completed_at: new Date().toISOString(),
+          estado: "perdido",
+          notas: "Bloqueado: coincide con cotizador_bloqueos",
+        }).eq("id", leadId);
+        if (error) throw error;
+        return responder({ ok: true, email_enviado: false });
+      }
+
       const { error } = await supabase.from("cotizador_leads").update({
         canal_envio: canal,
         email,
@@ -346,6 +365,23 @@ async function avisarEquipo(
     remitente: "Cotizador Soy Proceso",
     para: para.length ? para : undefined,
   });
+}
+
+async function estaBloqueado(email: string | null, ip: string | null): Promise<boolean> {
+  const buscados: Record<string, string> = {};
+  if (email) {
+    buscados.email = email;
+    buscados.dominio = email.split("@")[1];
+  }
+  if (ip) buscados.ip = ip.trim();
+  const valores = Object.values(buscados);
+  if (!valores.length) return false;
+  const { data, error } = await clienteServicio().from("cotizador_bloqueos").select("tipo, valor").in("valor", valores);
+  if (error) {
+    console.error("No se pudo leer cotizador_bloqueos:", error);
+    return false;
+  }
+  return ((data ?? []) as { tipo: string; valor: string }[]).some((b) => buscados[b.tipo] === b.valor);
 }
 
 function clienteServicio() {
