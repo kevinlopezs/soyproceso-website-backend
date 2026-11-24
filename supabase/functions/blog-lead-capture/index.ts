@@ -10,8 +10,8 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
 import { createRemoteJWKSet, jwtVerify } from "npm:jose@5";
 import { escapar, notificar } from "../_shared/notify.ts";
 import { crearEnvioBlog } from "../_shared/blog-mailer.ts";
-import { otpHtml, otpTexto } from "../_shared/templates/blog-newsletter.ts";
-import { emailValido, generarOtp, generarSalt, hashOtp, igualesSeguro, texto } from "../_shared/blog-utils.ts";
+import { bienvenidaHtml, bienvenidaTexto, otpHtml, otpTexto, type TarjetaBlog } from "../_shared/templates/blog-newsletter.ts";
+import { conParametros, emailValido, generarOtp, generarSalt, hashOtp, igualesSeguro, resumenPost, texto, urlDePost } from "../_shared/blog-utils.ts";
 
 const env = (k: string) => Deno.env.get(k) ?? "";
 const cors = {
@@ -112,6 +112,52 @@ async function vincularUsuario(sb: Sb, subscriberId: string, p: { email: string;
   return userId;
 }
 
+// Correo de bienvenida: el artículo de origen, otros 3 artículos y el WhatsApp. Se envía una sola vez y un fallo
+// nunca debe romper el registro.
+async function enviarBienvenida(sb: Sb, subscriberId: string, email: string, nombre: string | null, ctx: Contexto) {
+  try {
+    const { data: sub } = await sb.from("blog_subscribers").select("unsubscribe_token,welcome_sent_at").eq("id", subscriberId).maybeSingle();
+    if (!sub || sub.welcome_sent_at) return;
+
+    const campos = "id,title,slug,excerpt,content,featured_image_url";
+    let origen: Record<string, string | null> | null = null;
+    if (ctx.post_id) origen = (await sb.from("blog_posts").select(campos).eq("id", ctx.post_id).eq("status", "published").maybeSingle()).data;
+    else if (ctx.slug) origen = (await sb.from("blog_posts").select(campos).eq("slug", ctx.slug).eq("status", "published").maybeSingle()).data;
+
+    let q = sb.from("blog_posts").select(campos).eq("status", "published").order("created_at", { ascending: false }).limit(3);
+    if (origen?.id) q = q.neq("id", origen.id);
+    const { data: otrosPosts } = await q;
+
+    const utm = { utm_source: "bienvenida", utm_medium: "email", utm_campaign: "bienvenida" };
+    const tarjeta = (p: Record<string, string | null>): TarjetaBlog => ({
+      titulo: p.title as string,
+      url: conParametros(urlDePost(p.slug as string), utm),
+      imagen: p.featured_image_url,
+      resumen: resumenPost(p.excerpt, p.content, 140),
+    });
+    const datos = {
+      nombre,
+      origen: origen ? tarjeta(origen) : null,
+      otros: (otrosPosts ?? []).map(tarjeta),
+      urlWhatsapp: "https://wa.me/573186392462?text=" + encodeURIComponent("Hola, me suscribí al blog de Soy Proceso y quisiera más información"),
+      urlBaja: `${env("SUPABASE_URL")}/functions/v1/blog-email-track?e=unsub&t=${sub.unsubscribe_token}`,
+    };
+    const envio = crearEnvioBlog();
+    if (!envio) return;
+    const err = await envio.enviar({
+      para: email, asunto: "¡Te damos la bienvenida a Soy Proceso!",
+      html: bienvenidaHtml(datos), texto: bienvenidaTexto(datos), listUnsubscribe: datos.urlBaja,
+    });
+    if (err) {
+      console.error("Bienvenida no enviada:", err);
+      return;
+    }
+    await sb.from("blog_subscribers").update({ welcome_sent_at: new Date().toISOString() }).eq("id", subscriberId);
+  } catch (e) {
+    console.error("enviarBienvenida:", e);
+  }
+}
+
 async function evento(sb: Sb, subscriberId: string, type: string, ctx: Contexto, meta: Record<string, unknown> = {}) {
   await sb.from("blog_subscriber_events").insert({ subscriber_id: subscriberId, type, post_id: ctx.post_id, meta: { slug: ctx.slug, ...meta } });
 }
@@ -166,6 +212,7 @@ Deno.serve(async (req) => {
         await vincularUsuario(sb, r.id, { email, nombre, avatar: typeof payload.picture === "string" ? payload.picture : null, ctx });
         await evento(sb, r.id, "signup", ctx, { method: "google" });
         await evento(sb, r.id, "verified", ctx, { method: "google" });
+        await enviarBienvenida(sb, r.id, email, nombre, ctx);
         await avisarLead(email, nombre, "google", ctx);
       }
       return responder({ ok: true, nombre });
@@ -221,6 +268,7 @@ Deno.serve(async (req) => {
       if (r.activadoAhora) {
         await vincularUsuario(sb, r.id, { email, nombre: sub.full_name, ctx });
         await evento(sb, r.id, "verified", ctx, { method: "email" });
+        await enviarBienvenida(sb, r.id, email, sub.full_name, ctx);
         await avisarLead(email, sub.full_name, "email", ctx);
       }
       return responder({ ok: true });
