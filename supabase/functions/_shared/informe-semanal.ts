@@ -18,6 +18,7 @@ export interface Recomendacion {
 }
 export interface ProximoBlog {
   titulo: string; // título sugerido del artículo
+  objetivo: string; // captar tráfico | profundizar un tema que ya funciona | generar leads
   palabra_clave: string; // búsqueda principal que debe atacar
   por_que: string; // qué datos lo respaldan
   enfoque: string; // cómo abordarlo
@@ -32,10 +33,8 @@ export interface AnalisisIA {
   alertas: string[];
   seguimiento: { tema: string; estado: string }[];
   recomendaciones: Recomendacion[];
-  ideas_contenido: string[];
   conclusion: string;
-  proximo_blog: ProximoBlog | null;
-  alternativas: { titulo: string; por_que: string }[];
+  proximos_blogs: ProximoBlog[]; // mínimo 3, el primero es el recomendado
 }
 
 const n0 = (n: number) => Math.round(n).toLocaleString("es-CO");
@@ -59,8 +58,8 @@ Reglas:
 - Compara siempre con la semana anterior y di si algo mejoró o empeoró. Para la posición, un número MENOR es mejor.
 - Nombra los blogs por su título. Las recomendaciones deben ser accionables esta semana (título y meta descripción, enlaces internos, actualizar o ampliar un artículo, nuevo contenido a partir de las búsquedas reales, CTA hacia WhatsApp o la batería de riesgo psicosocial, etc.).
 - Si recibes "informe_anterior", revisa en "seguimiento" qué pasó con esas recomendaciones usando los datos de esta semana.
-- El cierre es lo más importante: "conclusion" resume en 2 a 3 frases qué está funcionando y qué no, y "proximo_blog" debe decir EXACTAMENTE qué artículo deberíamos escribir a continuación, justificado con los datos: búsquedas reales con impresiones que ningún blog responde bien, temas que ya traen clics y se pueden profundizar, blogs que traen leads, y posiciones 8 a 20 que un artículo nuevo enlazado podría empujar. Da un título concreto, la palabra clave principal, por qué (con cifras), el enfoque, 4 a 6 puntos de estructura y a qué blogs o servicios enlazar. En "alternativas" da 2 opciones más (título y por qué).
-- Responde SOLO un objeto JSON con estas claves: veredicto ("mejoró"|"igual"|"empeoró"), titular (máx. 90 caracteres), resumen (2 a 3 frases), mejoras (lista de frases), alertas (lista de frases), seguimiento (lista de {tema, estado}), recomendaciones (lista de {prioridad: "alta"|"media"|"baja", titulo, detalle, blog (título del blog o vacío)}, máx. 6), ideas_contenido (lista de 3 ideas breves), conclusion (texto), proximo_blog ({titulo, palabra_clave, por_que, enfoque, puntos: lista, enlazar_a: lista}), alternativas (lista de {titulo, por_que}).`;
+- El cierre es lo más importante: "conclusion" resume en 2 a 3 frases qué está funcionando y qué no, y "proximos_blogs" debe proponer EXACTAMENTE 3 artículos nuevos (ni menos), ordenados por prioridad: el primero es el recomendado. Deben ser distintos entre sí y cada uno justificado con los datos recibidos: búsquedas reales con impresiones que ningún blog responde bien, temas que ya traen clics y se pueden profundizar, blogs que traen leads y posiciones 8 a 20 que un artículo nuevo enlazado podría empujar. Intenta cubrir objetivos diferentes (captar tráfico, profundizar un tema que ya funciona, generar leads hacia un servicio de Soy Proceso). Cada uno lleva: título concreto, objetivo, palabra clave principal, por qué (con cifras), enfoque, 4 a 6 puntos de estructura y a qué blogs o servicios enlazar.
+- Responde SOLO un objeto JSON con estas claves: veredicto ("mejoró"|"igual"|"empeoró"), titular (máx. 90 caracteres), resumen (2 a 3 frases), mejoras (lista de frases), alertas (lista de frases), seguimiento (lista de {tema, estado}), recomendaciones (lista de {prioridad: "alta"|"media"|"baja", titulo, detalle, blog (título del blog o vacío)}, máx. 6), conclusion (texto), proximos_blogs (lista de 3 objetos {titulo, objetivo (frase corta, máx. 8 palabras), palabra_clave, por_que, enfoque, puntos: lista, enlazar_a: lista}).`;
 
 function compactar(r: Rendimiento, anterior: unknown) {
   const m = (x: Metricas) => ({ clics: x.clicks, impresiones: x.impressions, ctr: +(x.ctr * 100).toFixed(2), posicion: +x.position.toFixed(1) });
@@ -120,17 +119,13 @@ export async function analizarConIA(r: Rendimiento, anterior: unknown): Promise<
           titulo: String(x.titulo ?? "").slice(0, 160), detalle: String(x.detalle ?? "").slice(0, 700), blog: String(x.blog ?? "").slice(0, 160),
         })).filter((x: Recomendacion) => x.titulo)
         : [],
-      ideas_contenido: lista(o.ideas_contenido, 5),
       conclusion: String(o.conclusion ?? "").slice(0, 900),
-      proximo_blog: o.proximo_blog && o.proximo_blog.titulo
-        ? {
-          titulo: String(o.proximo_blog.titulo).slice(0, 200), palabra_clave: String(o.proximo_blog.palabra_clave ?? "").slice(0, 120),
-          por_que: String(o.proximo_blog.por_que ?? "").slice(0, 800), enfoque: String(o.proximo_blog.enfoque ?? "").slice(0, 800),
-          puntos: lista(o.proximo_blog.puntos, 7), enlazar_a: lista(o.proximo_blog.enlazar_a, 5),
-        }
-        : null,
-      alternativas: Array.isArray(o.alternativas)
-        ? o.alternativas.slice(0, 3).map((x: { titulo?: unknown; por_que?: unknown }) => ({ titulo: String(x?.titulo ?? "").slice(0, 200), por_que: String(x?.por_que ?? "").slice(0, 400) })).filter((x: { titulo: string }) => x.titulo)
+      proximos_blogs: Array.isArray(o.proximos_blogs)
+        ? o.proximos_blogs.slice(0, 4).map((x: Record<string, unknown>) => ({
+          titulo: String(x.titulo ?? "").slice(0, 200), objetivo: String(x.objetivo ?? "").slice(0, 120),
+          palabra_clave: String(x.palabra_clave ?? "").slice(0, 120), por_que: String(x.por_que ?? "").slice(0, 800),
+          enfoque: String(x.enfoque ?? "").slice(0, 800), puntos: lista(x.puntos, 7), enlazar_a: lista(x.enlazar_a, 5),
+        })).filter((x: ProximoBlog) => x.titulo)
         : [],
     };
   } catch (e) {
@@ -245,20 +240,27 @@ ${ia?.resumen ? `<div style="font-size:14px;line-height:22px;color:#374151;margi
 ${x.blog ? `<div style="font-size:12px;color:${NEUTRO};margin-top:4px;">Blog: ${escapar(x.blog)}</div>` : ""}</td></tr></table></td></tr>`).join("")
     : "";
 
-  const pb = ia?.proximo_blog;
-  const cierre = ia && (ia.conclusion || pb)
+  const blogsSug = ia?.proximos_blogs ?? [];
+  const tarjetaSug = (x: ProximoBlog, i: number) => {
+    const principal = i === 0;
+    const fondo = principal ? VERDE : "#ffffff";
+    const t1 = principal ? "#ffffff" : "#111827";
+    const t2 = principal ? "#e5f0ee" : "#374151";
+    const t3 = principal ? "#bcd6d1" : NEUTRO;
+    return `<tr><td style="padding:0 26px 14px;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${fondo};border:${principal ? "0" : "1px solid #e5e7eb"};border-radius:16px;"><tr><td style="padding:18px 18px 20px;">
+<div style="font-size:12px;letter-spacing:1.1px;text-transform:uppercase;color:${principal ? DORADO : VERDE};font-weight:bold;">${principal ? "📝 Prioridad 1 · el que recomendamos escribir primero" : `Prioridad ${i + 1}`}${x.objetivo ? ` · ${escapar(x.objetivo)}` : ""}</div>
+<div style="font-size:${principal ? 21 : 18}px;line-height:${principal ? 27 : 24}px;font-weight:bold;color:${t1};margin:6px 0 10px;">${i + 1}. ${escapar(x.titulo)}</div>
+${x.palabra_clave ? `<div style="display:inline-block;background:${principal ? "#ffffff22" : "#f0f5f4"};color:${principal ? "#ffffff" : VERDE};font-size:12px;padding:3px 10px;border-radius:999px;margin-bottom:10px;">Palabra clave: ${escapar(x.palabra_clave)}</div>` : ""}
+${x.por_que ? `<div style="font-size:14px;line-height:22px;color:${t2};margin-bottom:8px;"><b style="color:${t1};">Por qué:</b> ${escapar(x.por_que)}</div>` : ""}
+${x.enfoque ? `<div style="font-size:14px;line-height:22px;color:${t2};margin-bottom:8px;"><b style="color:${t1};">Enfoque:</b> ${escapar(x.enfoque)}</div>` : ""}
+${x.puntos.length ? `<div style="font-size:14px;line-height:22px;color:${t2};"><b style="color:${t1};">Estructura sugerida:</b><br>${x.puntos.map((q, k) => `${k + 1}. ${escapar(q)}`).join("<br>")}</div>` : ""}
+${x.enlazar_a.length ? `<div style="font-size:13px;line-height:20px;color:${t3};margin-top:10px;">Enlazar a: ${x.enlazar_a.map(escapar).join(" · ")}</div>` : ""}
+</td></tr></table></td></tr>`;
+  };
+  const cierre = ia && (ia.conclusion || blogsSug.length)
     ? `<tr><td style="padding:22px 26px 6px;border-top:3px solid ${DORADO};"><div style="font-size:12px;letter-spacing:1.2px;text-transform:uppercase;color:${DORADO};font-weight:bold;">Conclusión y próximos pasos</div></td></tr>
 ${ia.conclusion ? `<tr><td style="padding:2px 26px 12px;font-size:15px;line-height:24px;color:#111827;">${escapar(ia.conclusion)}</td></tr>` : ""}
-${pb ? `<tr><td style="padding:0 26px 14px;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${VERDE};border-radius:16px;"><tr><td style="padding:20px 20px 22px;">
-<div style="font-size:12px;letter-spacing:1.2px;text-transform:uppercase;color:${DORADO};font-weight:bold;">📝 El próximo blog que deberíamos escribir</div>
-<div style="font-size:21px;line-height:27px;font-weight:bold;color:#ffffff;margin:6px 0 10px;">${escapar(pb.titulo)}</div>
-${pb.palabra_clave ? `<div style="display:inline-block;background:#ffffff22;color:#ffffff;font-size:12px;padding:3px 10px;border-radius:999px;margin-bottom:10px;">Palabra clave: ${escapar(pb.palabra_clave)}</div>` : ""}
-${pb.por_que ? `<div style="font-size:14px;line-height:22px;color:#e5f0ee;margin-bottom:8px;"><b style="color:#ffffff;">Por qué:</b> ${escapar(pb.por_que)}</div>` : ""}
-${pb.enfoque ? `<div style="font-size:14px;line-height:22px;color:#e5f0ee;margin-bottom:8px;"><b style="color:#ffffff;">Enfoque:</b> ${escapar(pb.enfoque)}</div>` : ""}
-${pb.puntos.length ? `<div style="font-size:14px;line-height:22px;color:#e5f0ee;"><b style="color:#ffffff;">Estructura sugerida:</b><br>${pb.puntos.map((x, i) => `${i + 1}. ${escapar(x)}`).join("<br>")}</div>` : ""}
-${pb.enlazar_a.length ? `<div style="font-size:13px;line-height:20px;color:#bcd6d1;margin-top:10px;">Enlazar a: ${pb.enlazar_a.map(escapar).join(" · ")}</div>` : ""}
-</td></tr></table></td></tr>` : ""}
-${ia.alternativas.length ? `<tr><td style="padding:0 26px 8px;font-size:13px;color:${NEUTRO};font-weight:bold;">Otras opciones si prefieres:</td></tr>${ia.alternativas.map((x) => `<tr><td style="padding:0 26px 8px;font-size:14px;line-height:21px;color:#374151;">• <b>${escapar(x.titulo)}</b> — ${escapar(x.por_que)}</td></tr>`).join("")}` : ""}`
+${blogsSug.length ? `<tr><td style="padding:4px 26px 10px;font-size:17px;font-weight:bold;color:${VERDE};">Los ${blogsSug.length} blogs que deberíamos escribir a continuación</td></tr>${blogsSug.map(tarjetaSug).join("")}` : ""}`
     : "";
 
   const html = `<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
@@ -280,7 +282,6 @@ ${ia?.mejoras.length ? seccion("✅ Lo que mejoró", ul(ia.mejoras, OK)) : ""}
 ${ia?.alertas.length ? seccion("⚠️ Alertas", ul(ia.alertas, MAL)) : ""}
 ${ia?.seguimiento.length ? seccion("Seguimiento de lo que recomendamos la semana pasada", seguimiento) : ""}
 ${recs ? seccion("Recomendaciones para esta semana", recs) : ""}
-${ia?.ideas_contenido.length ? seccion("Ideas de contenido (según las búsquedas reales)", ul(ia.ideas_contenido, DORADO)) : ""}
 ${seccion("Contexto", `<tr><td style="padding:0 26px 10px;font-size:13px;line-height:20px;color:#374151;">${dev ? `<b>Dispositivos:</b> ${dev}<br>` : ""}${pais ? `<b>Países (clics):</b> ${pais}<br>` : ""}<b>Indexación:</b> ${r.indexacion.indexados} de ${r.indexacion.total} artículos indexados.</td></tr>`)}
 ${cierre}
 <tr><td align="center" style="padding:14px 26px 22px;"><a href="${SITIO}/admin/dashboard" style="display:inline-block;background:${VERDE};color:#ffffff;text-decoration:none;font-weight:bold;font-size:14px;padding:12px 24px;border-radius:999px;">Ver detalle en el panel</a></td></tr>
@@ -296,7 +297,9 @@ export function informeTelegram(r: Rendimiento, ia: AnalisisIA | null, veredicto
   const flecha = (x: number, y: number) => (x > y ? "▲" : x < y ? "▼" : "=");
   const top = r.paginas.filter((x) => x.tipo === "blog" && x.actual.clicks > 0).slice(0, 3)
     .map((x) => `• ${escapar(corta(x.titulo, 60))}: ${x.actual.clicks} clics`).join("\n");
-  const prox = ia?.proximo_blog ? `\n\n📝 <b>Próximo blog sugerido</b>\n${escapar(ia.proximo_blog.titulo)}\n${escapar(corta(ia.proximo_blog.por_que, 220))}` : "";
+  const prox = ia?.proximos_blogs.length
+    ? `\n\n📝 <b>Blogs que deberíamos escribir</b>\n${ia.proximos_blogs.map((x, i) => `${i + 1}. ${escapar(x.titulo)}`).join("\n")}\n<i>${escapar(corta(ia.proximos_blogs[0].por_que, 200))}</i>`
+    : "";
   const rec = ia?.recomendaciones.slice(0, 3).map((x) => `• [${x.prioridad}] ${escapar(x.titulo)}`).join("\n");
   const emoji = veredicto === "mejoró" ? "📈" : veredicto === "empeoró" ? "📉" : "➖";
   return `${emoji} <b>Informe semanal del blog</b> (${r.rango.inicio} → ${r.rango.fin})
