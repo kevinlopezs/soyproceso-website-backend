@@ -88,6 +88,9 @@ async function procesar(sb: Sb, postId: string, soloNewsletter: boolean) {
   lineas.push(typeof nl === "string" ? `✉️ Newsletter: ${escapar(nl)}` : `✉️ Newsletter: enviado a ${nl.enviados} de ${nl.total}${nl.fallidos ? `, <b>${nl.fallidos} fallidos</b>` : ""}`);
 
   if (!soloNewsletter) {
+    // El admin revalida el sitemap del sitio justo después de publicar: se espera un poco para que Google
+    // encuentre ya el post nuevo en el sitemap.
+    await dormir(20_000);
     const url = urlDePost(post.slug);
     if (gscConfigurado()) {
       const err = await reenviarSitemap(`${SITIO}/sitemap.xml`);
