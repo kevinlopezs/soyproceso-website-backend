@@ -11,7 +11,7 @@ export interface CorreoBlog {
   listUnsubscribe?: string; // URL de baja (RFC 8058)
 }
 
-export function crearEnvioBlog(pool = false) {
+export function crearEnvioBlog(pool = false, remitente = "Soy Proceso") {
   const host = env("AWS_SES_SMTP_ENDPOINT");
   const port = Number(env("AWS_SES_SMTP_PORT") || "587");
   const user = env("AWS_SMTP_USER_NAME");
@@ -26,7 +26,7 @@ export function crearEnvioBlog(pool = false) {
     async enviar(c: CorreoBlog): Promise<string | null> {
       try {
         await transporte.sendMail({
-          from: `Soy Proceso <${desde}>`,
+          from: `${remitente} <${desde}>`,
           to: c.para,
           subject: c.asunto,
           html: c.html,

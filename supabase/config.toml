@@ -58,6 +58,14 @@ verify_jwt = false
 [functions.blog-index-check]
 verify_jwt = false
 
+# Rendimiento del blog en Google para el panel (solo rol admin).
+[functions.gsc-performance]
+verify_jwt = false
+
+# Informe semanal interno (pg_cron, lunes 7:00 a. m. Colombia). Autoriza por x-publish-secret o sesión de admin.
+[functions.blog-weekly-report]
+verify_jwt = false
+
 [realtime]
 enabled = true
 

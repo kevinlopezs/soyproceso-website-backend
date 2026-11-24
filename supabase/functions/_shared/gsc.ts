@@ -50,6 +50,30 @@ export async function reenviarSitemap(sitemapUrl: string): Promise<string | null
   }
 }
 
+export interface FilaAnalytics {
+  keys: string[];
+  clicks: number;
+  impressions: number;
+  ctr: number;
+  position: number;
+}
+
+// Search Analytics (clics, impresiones, CTR, posición). Los datos llevan ~2 días de retraso.
+export async function analytics(body: Record<string, unknown>): Promise<FilaAnalytics[]> {
+  const t = await accessToken();
+  const r = await fetch(
+    `https://www.googleapis.com/webmasters/v3/sites/${encodeURIComponent(SITE_URL())}/searchAnalytics/query`,
+    {
+      method: "POST",
+      headers: { Authorization: `Bearer ${t}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ type: "web", ...body }),
+    },
+  );
+  if (!r.ok) throw new Error(`Search Analytics ${r.status}: ${await r.text()}`);
+  const j = await r.json();
+  return (j.rows ?? []) as FilaAnalytics[];
+}
+
 export interface Inspeccion {
   verdict: string | null;
   coverageState: string | null;
