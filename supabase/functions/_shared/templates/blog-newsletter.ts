@@ -36,7 +36,7 @@ export function newsletterHtml(d: DatosNewsletter): string {
 <p style="margin:0 0 24px;font-size:16px;line-height:25px;color:#374151;">${escapar(d.resumen)}</p>
 <a href="${d.urlLectura}" style="display:inline-block;background:${VERDE};color:#ffffff;text-decoration:none;font-weight:bold;font-size:15px;padding:14px 28px;border-radius:999px;">Leer artículo</a>
 </td></tr>
-<tr><td style="padding:24px 32px 28px;font-size:15px;line-height:23px;color:#374151;">Un abrazo,<br><b style="color:${VERDE};">Catalina Bernal</b><br><span style="color:#6b7280;">Soy Proceso</span></td></tr>`;
+<tr><td style="padding:24px 32px 28px;font-size:15px;line-height:23px;color:#374151;">Un abrazo,<br><b style="color:${VERDE};">Equipo Soy Proceso</b><br><span style="color:#6b7280;">Especialistas en SST y bienestar laboral</span></td></tr>`;
   const pie = `Recibes este correo porque te suscribiste a los artículos del blog de Soy Proceso (soyproceso.com). Tus datos se tratan conforme a la Ley 1581 de 2012.<br>
 <a href="${d.urlBaja}" style="color:#6b7280;text-decoration:underline;">Darme de baja</a>
 <img src="${d.pixel}" width="1" height="1" alt="" style="display:block;border:0;">`;
@@ -44,7 +44,7 @@ export function newsletterHtml(d: DatosNewsletter): string {
 }
 
 export function newsletterTexto(d: DatosNewsletter): string {
-  return `${d.titulo}\n\n${d.resumen}\n\nLeer artículo: ${d.urlLectura}\n\nCatalina Bernal - Soy Proceso\n\nDarme de baja: ${d.urlBaja}`;
+  return `${d.titulo}\n\n${d.resumen}\n\nLeer artículo: ${d.urlLectura}\n\nEquipo Soy Proceso - Especialistas en SST y bienestar laboral\n\nDarme de baja: ${d.urlBaja}`;
 }
 
 export function otpHtml(codigo: string): string {
