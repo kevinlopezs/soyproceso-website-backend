@@ -4,7 +4,7 @@
 //   email_start  → { email } crea el suscriptor pendiente y envía un OTP de 6 dígitos por correo.
 //   email_verify → { email, code } valida el OTP y activa al suscriptor.
 // En todas: post_id, slug, utm_*, referrer (de qué blog vino el lead).
-// Los suscriptores NO son usuarios de Supabase Auth (ver migración create_blog_subscribers).
+// Cada lead también queda como usuario de Supabase Auth con rol 'lead' (sin permisos ni sesión).
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
 import { createRemoteJWKSet, jwtVerify } from "npm:jose@5";
