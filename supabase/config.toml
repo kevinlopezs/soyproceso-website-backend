@@ -42,6 +42,22 @@ verify_jwt = false
 [functions.cotizador-lead]
 verify_jwt = false
 
+# Leads del blog (modal de suscripción): valida Google ID token / OTP y escribe con service role.
+[functions.blog-lead-capture]
+verify_jwt = false
+
+# Newsletter al publicar + indexación. Autoriza por x-publish-secret (trigger) o sesión de admin.
+[functions.blog-on-publish]
+verify_jwt = false
+
+# Tracking público de aperturas/clics/bajas de los correos del blog.
+[functions.blog-email-track]
+verify_jwt = false
+
+# Revisión diaria de indexación (pg_cron). Autoriza por x-publish-secret o sesión de admin.
+[functions.blog-index-check]
+verify_jwt = false
+
 [realtime]
 enabled = true
 
